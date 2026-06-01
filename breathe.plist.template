@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN"
+  "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>Label</key>
+    <string>local.alter.breathe</string>
+
+    <key>ProgramArguments</key>
+    <array>
+        <string>__INSTALL_DIR__/breathe</string>
+    </array>
+
+    <!-- launchd ticks every 60 s. The binary itself throttles to ~5 min
+         (via minIntervalSeconds in breathe.swift). This lets a "breathe"
+         appear within ~1 min of you returning to the laptop. -->
+    <key>StartInterval</key>
+    <integer>60</integer>
+
+    <!-- Required so the overlay can attach to the logged-in GUI session. -->
+    <key>LimitLoadToSessionType</key>
+    <string>Aqua</string>
+
+    <key>RunAtLoad</key>
+    <false/>
+
+    <key>StandardOutPath</key>
+    <string>/tmp/alter-breathe.out.log</string>
+    <key>StandardErrorPath</key>
+    <string>/tmp/alter-breathe.err.log</string>
+</dict>
+</plist>

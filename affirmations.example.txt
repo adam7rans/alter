@@ -1,0 +1,40 @@
+# alter — affirmations template
+#
+# Copy this file to `affirmations.txt` and edit with your own.
+# `affirmations.txt` is gitignored so your personal list stays private.
+#
+# Format:
+#   - One affirmation per line.
+#   - Lines starting with # are comments and ignored.
+#   - Blank lines are ignored.
+#
+# Best practices for subliminal priming:
+#   - Keep each line short (3-7 words). At ~33 ms display time, long
+#     lines can't be parsed even subliminally.
+#   - Use first-person, present-tense, positive phrasing.
+#     YES: "I am calm."
+#     NO:  "I won't panic." — the subconscious drops words like "not".
+#   - The list cycles in order, so every line gets equal exposure.
+#   - Edit anytime — changes are picked up automatically on the next firing.
+
+# === Calm / focus ===
+I am calm.
+I am focused.
+I am present.
+I am enough.
+My mind is clear.
+
+# === Confidence ===
+I trust myself.
+I am capable.
+I move with momentum.
+
+# === Health ===
+My body is healthy.
+I am strong.
+Every system in me thrives.
+
+# === Abundance ===
+Money flows to me.
+Opportunities find me.
+I am exactly where I need to be.

@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN"
+  "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>Label</key>
+    <string>local.alter.affirm</string>
+
+    <key>ProgramArguments</key>
+    <array>
+        <string>__INSTALL_DIR__/affirm</string>
+    </array>
+
+    <!-- launchd ticks every 60 s. The binary itself rolls a random gap
+         (minIntervalSec..maxIntervalSec in affirm.swift, default 45-180 s)
+         so the actual cadence of visible flashes is unpredictable. -->
+    <key>StartInterval</key>
+    <integer>60</integer>
+
+    <!-- Required so the overlay can attach to the logged-in GUI session. -->
+    <key>LimitLoadToSessionType</key>
+    <string>Aqua</string>
+
+    <key>RunAtLoad</key>
+    <false/>
+
+    <key>StandardOutPath</key>
+    <string>/tmp/alter-affirm.out.log</string>
+    <key>StandardErrorPath</key>
+    <string>/tmp/alter-affirm.err.log</string>
+</dict>
+</plist>

@@ -5,9 +5,10 @@ affirmations.txt
 com.adam.*.plist
 com.*.local.plist
 
-# Compiled binaries — users build from source via install.sh / build.sh.
+# Compiled binaries — users build from source via install.sh.
 /breathe
 /affirm
+/alterprefs
 
 # macOS junk
 .DS_Store

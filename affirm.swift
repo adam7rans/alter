@@ -195,14 +195,35 @@ window.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary,
                              .stationary, .ignoresCycle]
 window.isReleasedWhenClosed = false
 
-let label = NSTextField(labelWithString: affirmation)
-label.font = font
-label.textColor = NSColor.white.withAlphaComponent(affirmTextAlpha)
-label.backgroundColor = .clear
+// Build an attributed-string factory that gives the text a white fill +
+// black outline. Negative `.strokeWidth` means "stroke AND fill" (a positive
+// value would give an unfilled outline only). The outline guarantees a
+// high-contrast edge regardless of what's behind the window — readable on
+// white backgrounds (the dark outline pops), readable on dark backgrounds
+// (the white fill pops), and crucially, gives the visual cortex a sharp
+// edge signal at every glyph boundary for reliable subliminal pickup.
+let centered: NSMutableParagraphStyle = {
+    let p = NSMutableParagraphStyle()
+    p.alignment = .center
+    return p
+}()
+func styled(_ s: String) -> NSAttributedString {
+    NSAttributedString(string: s, attributes: [
+        .font: font,
+        .foregroundColor: NSColor.white.withAlphaComponent(affirmTextAlpha),
+        .strokeColor: NSColor.black.withAlphaComponent(affirmTextAlpha),
+        .strokeWidth: -4.0,          // % of font size; -4 ≈ 4% outline + fill
+        .paragraphStyle: centered,
+    ])
+}
+
+let label = NSTextField()
 label.isBezeled = false
 label.isEditable = false
 label.drawsBackground = false
+label.backgroundColor = .clear
 label.alignment = .center
+label.attributedStringValue = styled(affirmation)
 label.frame = NSRect(origin: .zero, size: winRect.size)
 label.autoresizingMask = [.width, .height]
 
@@ -213,7 +234,7 @@ window.orderFrontRegardless()
 
 // Swap to mask after the flash window.
 DispatchQueue.main.asyncAfter(deadline: .now() + .milliseconds(flashMs)) {
-    label.stringValue = mask
+    label.attributedStringValue = styled(mask)
     label.needsDisplay = true
 
     // Then tear down after the mask window.

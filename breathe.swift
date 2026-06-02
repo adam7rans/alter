@@ -4,36 +4,57 @@ import CoreImage
 import Metal
 import MetalKit
 
-// Total time from appearance until fade-out begins (seconds).
-// Includes the fade-in, so effective "fully visible" time is
-// roughly displaySeconds - fadeInSeconds.
-let displaySeconds: Double = 6.0
-// Fade-in duration (seconds) — how slowly the word appears.
-let fadeInSeconds: Double = 2.0
-// Fade-out duration (seconds) — how slowly it disappears.
-let fadeSeconds: Double = 1.0
+// MARK: - Config (read from ~/Library/Application Support/breathe/config.json)
+//
+// All defaults below match the original hardcoded values. If the JSON file is
+// missing, unparseable, or only partially specified, the unspecified fields
+// fall back to these defaults. Edit via the `alterprefs` menu-bar app, or by
+// hand in the JSON file directly.
 
-// Sine-wave distortion params (mirrors CAST's CaptionShaderRenderer math).
-// frequency = # of wave cycles across the source image along the wave dir.
-// speed     = radians per second the wave travels.
-// amplitude = max displacement in *pixels* perpendicular to the wave dir.
-// angleDeg  = 0 means the wave runs horizontally (text wiggles vertically).
-let waveFrequency: CGFloat = 1.2
-let waveSpeed: CGFloat = 1.8
-let waveAmplitudePx: CGFloat = 9.0
-let waveAngleDeg: CGFloat = 0.0
+struct BreatheConfig: Codable {
+    var enabled: Bool = true
+    var displaySeconds: Double = 6.0
+    var fadeInSeconds: Double = 2.0
+    var fadeSeconds: Double = 1.0
+    var waveFrequency: Double = 1.2
+    var waveSpeed: Double = 1.8
+    var waveAmplitudePx: Double = 9.0
+    var waveAngleDeg: Double = 0.0
+    var idleSkipSeconds: Double = 120.0
+    var minIntervalSec: Double = 180.0
+    var maxIntervalSec: Double = 600.0
+    var fontSize: Double = 220.0
+    var fontAlpha: Double = 0.85
+}
 
-// Skip showing the overlay if the user has been idle (no keyboard, mouse,
-// or trackpad activity) for at least this many seconds. Prevents "breathe"
-// from firing when you've walked away or the screen is asleep.
-let idleSkipSeconds: Double = 120.0
+let _cfg: BreatheConfig = {
+    let url = FileManager.default
+        .urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
+        .appendingPathComponent("breathe/config.json")
+    guard let data = try? Data(contentsOf: url),
+          let root = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+          let inner = root["breathe"],
+          let raw = try? JSONSerialization.data(withJSONObject: inner),
+          let parsed = try? JSONDecoder().decode(BreatheConfig.self, from: raw)
+    else { return BreatheConfig() }
+    return parsed
+}()
 
-// Random interval between actual breathe appearances, in seconds.
-// launchd ticks every 60s; the binary itself rolls a random "next allowed"
-// time within this range on each firing so the cadence feels unpredictable.
-// Default: 3-10 minutes (avg ~6.5).
-let minIntervalSec: Double = 180.0
-let maxIntervalSec: Double = 600.0
+let displaySeconds = _cfg.displaySeconds
+let fadeInSeconds  = _cfg.fadeInSeconds
+let fadeSeconds    = _cfg.fadeSeconds
+let waveFrequency: CGFloat   = CGFloat(_cfg.waveFrequency)
+let waveSpeed: CGFloat       = CGFloat(_cfg.waveSpeed)
+let waveAmplitudePx: CGFloat = CGFloat(_cfg.waveAmplitudePx)
+let waveAngleDeg: CGFloat    = CGFloat(_cfg.waveAngleDeg)
+let idleSkipSeconds          = _cfg.idleSkipSeconds
+let minIntervalSec           = _cfg.minIntervalSec
+let maxIntervalSec           = _cfg.maxIntervalSec
+let breatheFontSize: CGFloat = CGFloat(_cfg.fontSize)
+let breatheFontAlpha: CGFloat = CGFloat(_cfg.fontAlpha)
+
+// Master kill switch — exit immediately if the UI has disabled this tool.
+if !_cfg.enabled { exit(0) }
 
 // File used to remember when the next breathe is allowed to fire.
 let stateURL: URL = {
@@ -123,8 +144,8 @@ final class OverlayController {
             ]
             win.isReleasedWhenClosed = false
 
-            let font = NSFont.systemFont(ofSize: 220, weight: .medium)
-            let color = NSColor.white.withAlphaComponent(0.85)
+            let font = NSFont.systemFont(ofSize: breatheFontSize, weight: .medium)
+            let color = NSColor.white.withAlphaComponent(breatheFontAlpha)
             let textView: NSView = WaveTextView(text: "breathe",
                                                 font: font,
                                                 color: color,

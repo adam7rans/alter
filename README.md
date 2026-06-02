@@ -2,12 +2,13 @@
 
 > Two tiny macOS background tools for nudging your mind toward where you want it to go.
 
-`alter` is a pair of native Swift overlays that run quietly in the background while you work:
+`alter` is three native Swift programs that run quietly in the background while you work:
 
-- **`breathe`** — every ~5 minutes, the word *breathe* fades in across your screen with a gentle sine-wave distortion, holds for a few seconds, then fades away. Conscious, intentional, a moment to inhale.
-- **`affirm`** — every 45–180 seconds (random), one affirmation from your personal list flashes for 33 ms at a random spot on screen, immediately scrubbed by a 120 ms random-character mask. **Subliminal:** you won't consciously read it, but your visual cortex still processes it.
+- **`breathe`** — every ~3–10 minutes (random), the word *breathe* fades in across your screen with a gentle sine-wave distortion, holds for a few seconds, then fades away. Conscious, intentional, a moment to inhale.
+- **`affirm`** — every 15–60 seconds (random), one affirmation from your personal list flashes for 33 ms at a random spot on screen, immediately scrubbed by a 120 ms random-character mask. **Subliminal:** you won't consciously read it, but your visual cortex still processes it.
+- **`alterprefs`** — a tiny SwiftUI menu-bar app (waveform icon in your status bar) for tweaking every parameter of both tools live — intervals, durations, opacity, wave shape, font size — with sliders. Includes "Fire now" buttons to test changes immediately. Changes save instantly and the next firing picks them up; no rebuild.
 
-Both are **click-through** (won't steal focus or block typing), **idle-aware** (do nothing if you've walked away), and hold **no power assertions** (won't keep your Mac awake).
+The overlays are **click-through** (won't steal focus or block typing), **idle-aware** (do nothing if you've walked away), and hold **no power assertions** (won't keep your Mac awake).
 
 ## Why
 
@@ -63,12 +64,11 @@ My body is healthy.
 `affirmations.txt` is **gitignored** — your personal list stays on your machine and never leaves it.
 
 ### Timing, typography, colors, wave shape
-All tunables live at the top of each source file:
+Easiest path: click the waveform icon in your menu bar (`alterprefs`) and drag the sliders. Every change writes to `~/Library/Application Support/breathe/config.json` and the next firing picks it up. No rebuild, no reload.
 
-- [`breathe.swift`](./breathe.swift) — `displaySeconds`, `fadeInSeconds`, `idleSkipSeconds`, `minIntervalSeconds`, wave `frequency` / `speed` / `amplitude` / `angleDeg`.
-- [`affirm.swift`](./affirm.swift) — `flashMs`, `maskMs`, `minIntervalSec` / `maxIntervalSec`, `idleSkipSec`, `affirmFontSize` / `Weight` / `Alpha`, `edgeMargin`.
+Power-user path: edit `~/Library/Application Support/breathe/config.json` directly in any text editor. Both binaries fall back to their compiled-in defaults for any field that's missing or unparseable, so a partial config is fine.
 
-After editing source, run `./install.sh` again to rebuild and reload.
+Defaults / hard caps: each source file has its `Config` struct at the top with defaults, and `alterprefs.swift` defines the slider ranges. Edit those and re-run `./install.sh` if you need values outside the slider ranges.
 
 ## Verifying it works
 

@@ -1,35 +1,50 @@
 import Cocoa
 import IOKit
 
-// MARK: - Config
+// MARK: - Config (read from ~/Library/Application Support/breathe/config.json)
 
-// Affirmation visible duration (milliseconds). ~33 ms ≈ 2 frames at 60 Hz —
-// below conscious recognition threshold for most readers.
-let flashMs: Int = 33
-// Backward-mask duration (milliseconds). Random characters at the same spot
-// scrub the visual afterimage so you can't consciously re-read what flashed.
-let maskMs: Int = 120
+struct AffirmConfig: Codable {
+    var enabled: Bool = true
+    var flashMs: Int = 33
+    var maskMs: Int = 120
+    var minIntervalSec: Double = 15.0
+    var maxIntervalSec: Double = 60.0
+    var idleSkipSec: Double = 120.0
+    var fontSize: Double = 34
+    var textAlpha: Double = 0.5
+    var edgeMargin: Double = 60
+}
 
-// Random interval between actual firings (seconds). launchd ticks every 60 s;
-// the binary itself picks a random "next allowed" time within this range and
-// exits silently on ticks that arrive too soon.
-let minIntervalSec: Double = 15.0
-let maxIntervalSec: Double = 60.0
+let _cfg: AffirmConfig = {
+    let url = FileManager.default
+        .urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
+        .appendingPathComponent("breathe/config.json")
+    guard let data = try? Data(contentsOf: url),
+          let root = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+          let inner = root["affirm"],
+          let raw = try? JSONSerialization.data(withJSONObject: inner),
+          let parsed = try? JSONDecoder().decode(AffirmConfig.self, from: raw)
+    else { return AffirmConfig() }
+    return parsed
+}()
 
-// Skip showing if user has been idle (no keyboard/mouse/trackpad input) for
-// at least this many seconds. Same safety net as the breathe overlay.
-let idleSkipSec: Double = 120.0
+if !_cfg.enabled { exit(0) }
 
-// Typography — kept consistent so the visual signature of every flash matches.
-let affirmFontSize: CGFloat = 34
+let flashMs        = _cfg.flashMs
+let maskMs         = _cfg.maskMs
+let minIntervalSec = _cfg.minIntervalSec
+let maxIntervalSec = _cfg.maxIntervalSec
+let idleSkipSec    = _cfg.idleSkipSec
+let affirmFontSize: CGFloat   = CGFloat(_cfg.fontSize)
 let affirmFontWeight: NSFont.Weight = .medium
-let affirmTextAlpha: CGFloat = 0.5
-// Minimum distance (points) the text bbox must stay from any screen edge.
-let edgeMargin: CGFloat = 60
+let affirmTextAlpha: CGFloat  = CGFloat(_cfg.textAlpha)
+let edgeMargin: CGFloat       = CGFloat(_cfg.edgeMargin)
 
-// Paths
-let affirmationsURL = URL(fileURLWithPath:
-    "/Users/adam/Documents/breathe/affirmations.txt")
+// affirmations.txt lives next to the binary so a clone+install works without
+// any path tweaking. Bundle.main.bundleURL returns the directory containing
+// the running executable for non-bundled CLI binaries.
+let affirmationsURL: URL =
+    Bundle.main.bundleURL.appendingPathComponent("affirmations.txt")
 
 let stateDir: URL = {
     let base = FileManager.default.urls(for: .applicationSupportDirectory,

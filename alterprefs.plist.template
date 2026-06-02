@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN"
+  "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>Label</key>
+    <string>local.alter.prefs</string>
+
+    <key>ProgramArguments</key>
+    <array>
+        <string>__INSTALL_DIR__/alterprefs</string>
+    </array>
+
+    <!-- Launch on login, and restart if it crashes (but respect manual quit
+         from the menu bar — user-initiated quit will not auto-relaunch
+         until next login). -->
+    <key>RunAtLoad</key>
+    <true/>
+
+    <key>KeepAlive</key>
+    <dict>
+        <key>Crashed</key>
+        <true/>
+    </dict>
+
+    <!-- Required so the menu bar icon attaches to the GUI session. -->
+    <key>LimitLoadToSessionType</key>
+    <string>Aqua</string>
+
+    <key>StandardOutPath</key>
+    <string>/tmp/alter-prefs.out.log</string>
+    <key>StandardErrorPath</key>
+    <string>/tmp/alter-prefs.err.log</string>
+</dict>
+</plist>

@@ -28,32 +28,35 @@ let waveAngleDeg: CGFloat = 0.0
 // from firing when you've walked away or the screen is asleep.
 let idleSkipSeconds: Double = 120.0
 
-// Desired minimum gap between two overlay appearances, in seconds. launchd
-// fires us every 60s; this throttle keeps the actual cadence at ~5 minutes
-// while you're active. Drop launchd's StartInterval if you want a snappier
-// "first breath" after returning to the machine.
-let minIntervalSeconds: Double = 300.0
+// Random interval between actual breathe appearances, in seconds.
+// launchd ticks every 60s; the binary itself rolls a random "next allowed"
+// time within this range on each firing so the cadence feels unpredictable.
+// Default: 3-10 minutes (avg ~6.5).
+let minIntervalSec: Double = 180.0
+let maxIntervalSec: Double = 600.0
 
-// File used to remember when we last showed the overlay across runs.
+// File used to remember when the next breathe is allowed to fire.
 let stateURL: URL = {
     let base = FileManager.default.urls(for: .applicationSupportDirectory,
                                         in: .userDomainMask).first!
         .appendingPathComponent("breathe", isDirectory: true)
     try? FileManager.default.createDirectory(at: base,
                                              withIntermediateDirectories: true)
-    return base.appendingPathComponent("last_shown")
+    return base.appendingPathComponent("breathe_next_at")
 }()
 
-func lastShownAt() -> Date? {
+func nextAllowedAt() -> Date? {
     guard let s = try? String(contentsOf: stateURL, encoding: .utf8),
           let t = TimeInterval(s.trimmingCharacters(in: .whitespacesAndNewlines))
     else { return nil }
     return Date(timeIntervalSince1970: t)
 }
 
-func recordShownNow() {
-    let s = String(Date().timeIntervalSince1970)
-    try? s.write(to: stateURL, atomically: true, encoding: .utf8)
+/// Roll a fresh random interval and persist the next allowed timestamp.
+func scheduleNextAppearance() {
+    let gap = Double.random(in: minIntervalSec...maxIntervalSec)
+    let next = Date().timeIntervalSince1970 + gap
+    try? String(next).write(to: stateURL, atomically: true, encoding: .utf8)
 }
 
 /// Returns seconds since the last HID (keyboard/mouse) event, or nil on error.
@@ -85,14 +88,15 @@ if let idle = systemIdleSeconds(), idle >= idleSkipSeconds {
     exit(0)
 }
 
-// Throttle: don't show again until at least minIntervalSeconds have passed
-// since the last *actual* appearance. (launchd fires us every 60s.)
-if let last = lastShownAt(),
-   Date().timeIntervalSince(last) < minIntervalSeconds {
+// Throttle: don't show until we've passed the randomly-scheduled
+// "next allowed" timestamp. (launchd fires us every 60s.)
+if let next = nextAllowedAt(), Date() < next {
     exit(0)
 }
 
-recordShownNow()
+// Roll the next random gap *before* we display, so even if the display
+// crashes we don't replay every tick.
+scheduleNextAppearance()
 
 final class OverlayController {
     var windows: [NSWindow] = []

@@ -13,8 +13,8 @@ let maskMs: Int = 120
 // Random interval between actual firings (seconds). launchd ticks every 60 s;
 // the binary itself picks a random "next allowed" time within this range and
 // exits silently on ticks that arrive too soon.
-let minIntervalSec: Double = 45.0
-let maxIntervalSec: Double = 180.0
+let minIntervalSec: Double = 15.0
+let maxIntervalSec: Double = 60.0
 
 // Skip showing if user has been idle (no keyboard/mouse/trackpad input) for
 // at least this many seconds. Same safety net as the breathe overlay.
@@ -23,7 +23,7 @@ let idleSkipSec: Double = 120.0
 // Typography — kept consistent so the visual signature of every flash matches.
 let affirmFontSize: CGFloat = 34
 let affirmFontWeight: NSFont.Weight = .medium
-let affirmTextAlpha: CGFloat = 0.92
+let affirmTextAlpha: CGFloat = 0.5
 // Minimum distance (points) the text bbox must stay from any screen edge.
 let edgeMargin: CGFloat = 60
 

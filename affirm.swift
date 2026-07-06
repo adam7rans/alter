@@ -195,13 +195,7 @@ window.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary,
                              .stationary, .ignoresCycle]
 window.isReleasedWhenClosed = false
 
-// Build an attributed-string factory that gives the text a white fill +
-// black outline. Negative `.strokeWidth` means "stroke AND fill" (a positive
-// value would give an unfilled outline only). The outline guarantees a
-// high-contrast edge regardless of what's behind the window — readable on
-// white backgrounds (the dark outline pops), readable on dark backgrounds
-// (the white fill pops), and crucially, gives the visual cortex a sharp
-// edge signal at every glyph boundary for reliable subliminal pickup.
+// Build an attributed-string factory that gives the text a plain white fill.
 let centered: NSMutableParagraphStyle = {
     let p = NSMutableParagraphStyle()
     p.alignment = .center
@@ -211,8 +205,6 @@ func styled(_ s: String) -> NSAttributedString {
     NSAttributedString(string: s, attributes: [
         .font: font,
         .foregroundColor: NSColor.white.withAlphaComponent(affirmTextAlpha),
-        .strokeColor: NSColor.black.withAlphaComponent(affirmTextAlpha),
-        .strokeWidth: -4.0,          // % of font size; -4 ≈ 4% outline + fill
         .paragraphStyle: centered,
     ])
 }

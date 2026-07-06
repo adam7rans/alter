@@ -25,6 +25,10 @@ struct BreatheConfig: Codable {
     var maxIntervalSec: Double = 600.0
     var fontSize: Double = 220.0
     var fontAlpha: Double = 0.85
+    var overlayRed: Double = 0.0
+    var overlayGreen: Double = 0.45
+    var overlayBlue: Double = 0.75
+    var overlayAlpha: Double = 0.25
 }
 
 let _cfg: BreatheConfig = {
@@ -52,6 +56,10 @@ let minIntervalSec           = _cfg.minIntervalSec
 let maxIntervalSec           = _cfg.maxIntervalSec
 let breatheFontSize: CGFloat = CGFloat(_cfg.fontSize)
 let breatheFontAlpha: CGFloat = CGFloat(_cfg.fontAlpha)
+let overlayColor = NSColor(red: CGFloat(_cfg.overlayRed),
+                           green: CGFloat(_cfg.overlayGreen),
+                           blue: CGFloat(_cfg.overlayBlue),
+                           alpha: 1.0).withAlphaComponent(CGFloat(_cfg.overlayAlpha))
 
 // Master kill switch — exit immediately if the UI has disabled this tool.
 if !_cfg.enabled { exit(0) }
@@ -153,10 +161,10 @@ final class OverlayController {
                 ?? FallbackTextView(text: "breathe", font: font, color: color)
             textView.translatesAutoresizingMaskIntoConstraints = false
 
-            // subtle dark vignette so the word is readable on light backgrounds
+            // subtle deep skyblue vignette so the word is readable on light backgrounds
             let dim = NSView(frame: screen.frame)
             dim.wantsLayer = true
-            dim.layer?.backgroundColor = NSColor.black.withAlphaComponent(0.25).cgColor
+            dim.layer?.backgroundColor = overlayColor.cgColor
 
             let container = NSView(frame: screen.frame)
             container.addSubview(dim)

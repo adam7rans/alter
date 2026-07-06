@@ -18,6 +18,10 @@ struct BreatheConfig: Codable, Equatable {
     var maxIntervalSec: Double = 600.0
     var fontSize: Double = 220.0
     var fontAlpha: Double = 0.85
+    var overlayRed: Double = 0.0
+    var overlayGreen: Double = 0.45
+    var overlayBlue: Double = 0.75
+    var overlayAlpha: Double = 0.25
 }
 
 struct AffirmConfig: Codable, Equatable {
@@ -50,6 +54,10 @@ final class Store: ObservableObject {
         return base.appendingPathComponent("config.json")
     }()
 
+    enum SaveState: Equatable { case idle, saving, saved }
+    @Published var saveState: SaveState = .idle
+    private var savedResetWork: DispatchWorkItem?
+
     @Published var breathe: BreatheConfig {
         didSet { if oldValue != breathe { save() } }
     }
@@ -69,11 +77,23 @@ final class Store: ObservableObject {
     }
 
     func save() {
+        saveState = .saving
+        savedResetWork?.cancel()
+
         let root = RootConfig(breathe: breathe, affirm: affirm)
         let enc = JSONEncoder()
         enc.outputFormatting = [.prettyPrinted, .sortedKeys]
         guard let data = try? enc.encode(root) else { return }
         try? data.write(to: Self.url, options: .atomic)
+
+        // Briefly show "Saving…" before flipping to "Saved!", then fade to idle.
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) { [weak self] in
+            guard let self else { return }
+            self.saveState = .saved
+            let reset = DispatchWorkItem { [weak self] in self?.saveState = .idle }
+            self.savedResetWork = reset
+            DispatchQueue.main.asyncAfter(deadline: .now() + 1.5, execute: reset)
+        }
     }
 
     // MARK: - Actions
@@ -130,21 +150,21 @@ struct PrefsView: View {
     @EnvironmentObject var store: Store
 
     var body: some View {
-        ScrollView {
-            VStack(alignment: .leading, spacing: 0) {
-                BreatheSection()
-                Divider()
-                AffirmSection()
-                Divider()
-                FooterBar()
-            }
+        VStack(alignment: .leading, spacing: 0) {
+            BreatheSection()
+            Divider()
+            AffirmSection()
+            Divider()
+            FooterBar()
         }
-        .frame(maxHeight: 560)
+        .fixedSize(horizontal: false, vertical: true)
     }
 }
 
 struct BreatheSection: View {
     @EnvironmentObject var store: Store
+    @State private var showColorPicker = false
+
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
             HStack {
@@ -165,11 +185,91 @@ struct BreatheSection: View {
                 ParamSlider("Wave speed",   $store.breathe.waveSpeed, 0...5, fmt: "%.1f")
                 ParamSlider("Font size",    $store.breathe.fontSize, 80...400, fmt: "%.0f pt")
                 ParamSlider("Opacity",      $store.breathe.fontAlpha, 0...1, fmt: "%.0f%%", mult: 100)
+                HStack(spacing: 8) {
+                    Text("Overlay")
+                        .frame(width: 92, alignment: .leading)
+                        .font(.callout)
+                    Button {
+                        showColorPicker.toggle()
+                    } label: {
+                        RoundedRectangle(cornerRadius: 5)
+                            .fill(Color(red: store.breathe.overlayRed,
+                                        green: store.breathe.overlayGreen,
+                                        blue: store.breathe.overlayBlue)
+                                    .opacity(store.breathe.overlayAlpha))
+                            .frame(height: 22)
+                            .overlay(RoundedRectangle(cornerRadius: 5)
+                                .stroke(Color.secondary.opacity(0.4)))
+                    }
+                    .buttonStyle(.plain)
+                    .popover(isPresented: $showColorPicker, arrowEdge: .bottom) {
+                        ColorPickerPopover().environmentObject(store)
+                    }
+                }
             }
             .disabled(!store.breathe.enabled)
             .opacity(store.breathe.enabled ? 1.0 : 0.4)
         }
         .padding(14)
+    }
+}
+
+struct ColorPickerPopover: View {
+    @EnvironmentObject var store: Store
+
+    private let presets: [(String, Double, Double, Double)] = [
+        ("Skyblue", 0.0, 0.45, 0.75),
+        ("Black",   0.0, 0.0, 0.0),
+        ("Indigo",  0.29, 0.0, 0.51),
+        ("Teal",    0.0, 0.5, 0.5),
+        ("Rose",    0.86, 0.2, 0.4),
+        ("Amber",   0.9, 0.55, 0.1),
+        ("Forest",  0.1, 0.4, 0.15),
+        ("Slate",   0.3, 0.35, 0.42),
+    ]
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text("Overlay color")
+                .font(.headline)
+
+            RoundedRectangle(cornerRadius: 6)
+                .fill(Color(red: store.breathe.overlayRed,
+                            green: store.breathe.overlayGreen,
+                            blue: store.breathe.overlayBlue)
+                        .opacity(store.breathe.overlayAlpha))
+                .frame(height: 44)
+                .overlay(RoundedRectangle(cornerRadius: 6)
+                    .stroke(Color.secondary.opacity(0.4)))
+
+            LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 8), count: 4),
+                      spacing: 8) {
+                ForEach(presets, id: \.0) { p in
+                    Button {
+                        store.breathe.overlayRed = p.1
+                        store.breathe.overlayGreen = p.2
+                        store.breathe.overlayBlue = p.3
+                    } label: {
+                        RoundedRectangle(cornerRadius: 5)
+                            .fill(Color(red: p.1, green: p.2, blue: p.3))
+                            .frame(height: 26)
+                            .overlay(RoundedRectangle(cornerRadius: 5)
+                                .stroke(Color.secondary.opacity(0.4)))
+                    }
+                    .buttonStyle(.plain)
+                    .help(p.0)
+                }
+            }
+
+            Divider()
+
+            ParamSlider("Red",     $store.breathe.overlayRed, 0...1, fmt: "%.0f", mult: 255)
+            ParamSlider("Green",   $store.breathe.overlayGreen, 0...1, fmt: "%.0f", mult: 255)
+            ParamSlider("Blue",    $store.breathe.overlayBlue, 0...1, fmt: "%.0f", mult: 255)
+            ParamSlider("Opacity", $store.breathe.overlayAlpha, 0...1, fmt: "%.0f%%", mult: 100)
+        }
+        .padding(16)
+        .frame(width: 320)
     }
 }
 
@@ -208,10 +308,38 @@ struct FooterBar: View {
             Button("Edit affirmations…") { store.openAffirmationsFile() }
                 .buttonStyle(.link)
             Spacer()
+            SaveStatusView()
+            Spacer()
             Button("Quit alter") { NSApp.terminate(nil) }
                 .buttonStyle(.link)
         }
         .padding(14)
+    }
+}
+
+struct SaveStatusView: View {
+    @EnvironmentObject var store: Store
+    var body: some View {
+        Group {
+            switch store.saveState {
+            case .idle:
+                EmptyView()
+            case .saving:
+                HStack(spacing: 5) {
+                    ProgressView().controlSize(.small)
+                    Text("Saving…")
+                }
+                .foregroundColor(.secondary)
+            case .saved:
+                HStack(spacing: 5) {
+                    Image(systemName: "checkmark.circle.fill")
+                    Text("Saved!")
+                }
+                .foregroundColor(.green)
+            }
+        }
+        .font(.caption)
+        .animation(.easeInOut(duration: 0.2), value: store.saveState)
     }
 }
 

@@ -74,7 +74,14 @@ Defaults / hard caps: each source file has its `Config` struct at the top with d
 
 The `breathe` overlay is, well, visible.
 
-For `affirm`, since each flash is briefer than conscious recognition, watch one of these instead:
+For `affirm`, since each flash is briefer than conscious recognition, you have two easy ways to test it:
+
+- Click `Preview` in the `alterprefs` menu-bar app. That runs the next affirmation with a longer visible dwell and no mask so you can inspect wrapping and placement.
+- Or run `./affirm --preview` from the repo root for the same visible preview behavior.
+
+If you want to stress-test layout, add one intentionally long affirmation, set a larger font size in `alterprefs`, then hit `Preview` several times to sample different random positions.
+
+For background verification, watch one of these instead:
 
 ```bash
 # index increments every time an affirmation flashes
@@ -83,8 +90,6 @@ cat "$HOME/Library/Application Support/breathe/affirm_index"
 # any errors?
 cat /tmp/alter-affirm.err.log
 ```
-
-To temporarily *see* a flash, bump `flashMs` in `affirm.swift` to e.g. `700` and `maskMs` to `0`, rerun `./install.sh`, wait a minute or two, then revert.
 
 ## Uninstall
 

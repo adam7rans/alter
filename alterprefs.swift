@@ -104,14 +104,16 @@ final class Store: ObservableObject {
 
     func fireBreathe() { run("breathe", clearing: "breathe_next_at") }
     func fireAffirm()  { run("affirm",  clearing: "affirm_next_at") }
+    func previewAffirm() { run("affirm", args: ["--preview"], clearing: "affirm_next_at") }
 
-    private func run(_ name: String, clearing stateFile: String) {
+    private func run(_ name: String, args: [String] = [], clearing stateFile: String) {
         let stateURL = Self.url.deletingLastPathComponent()
             .appendingPathComponent(stateFile)
         try? FileManager.default.removeItem(at: stateURL)
         let bin = Self.binDir.appendingPathComponent(name)
         let task = Process()
         task.executableURL = bin
+        task.arguments = args
         try? task.run()
     }
 
@@ -282,8 +284,12 @@ struct AffirmSection: View {
                     .toggleStyle(.switch)
                     .font(.headline)
                 Spacer()
-                Button("Fire now") { store.fireAffirm() }
-                    .controlSize(.small)
+                HStack(spacing: 8) {
+                    Button("Preview") { store.previewAffirm() }
+                        .controlSize(.small)
+                    Button("Fire now") { store.fireAffirm() }
+                        .controlSize(.small)
+                }
             }
             Group {
                 ParamSlider("Interval min", $store.affirm.minIntervalSec, 5...300, fmt: "%.0f s")

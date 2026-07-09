@@ -30,8 +30,11 @@ let _cfg: AffirmConfig = {
 
 if !_cfg.enabled { exit(0) }
 
-let flashMs        = _cfg.flashMs
-let maskMs         = _cfg.maskMs
+let arguments = Set(CommandLine.arguments.dropFirst())
+let isPreviewMode = arguments.contains("--preview")
+
+let flashMs        = isPreviewMode ? max(_cfg.flashMs, 1200) : _cfg.flashMs
+let maskMs         = isPreviewMode ? 0 : _cfg.maskMs
 let minIntervalSec = _cfg.minIntervalSec
 let maxIntervalSec = _cfg.maxIntervalSec
 let idleSkipSec    = _cfg.idleSkipSec
@@ -39,6 +42,9 @@ let affirmFontSize: CGFloat   = CGFloat(_cfg.fontSize)
 let affirmFontWeight: NSFont.Weight = .medium
 let affirmTextAlpha: CGFloat  = CGFloat(_cfg.textAlpha)
 let edgeMargin: CGFloat       = CGFloat(_cfg.edgeMargin)
+let minAffirmFontSize: CGFloat = 1
+let windowHPadding: CGFloat = 16
+let windowVPadding: CGFloat = 10
 
 // affirmations.txt lives next to the binary so a clone+install works without
 // any path tweaking. Bundle.main.bundleURL returns the directory containing
@@ -120,9 +126,56 @@ func screenForCursor() -> NSScreen {
         ?? NSScreen.screens[0]
 }
 
-func measure(_ text: String, font: NSFont) -> CGSize {
-    let s = NSAttributedString(string: text, attributes: [.font: font])
-    return s.size()
+func paragraphStyle() -> NSMutableParagraphStyle {
+    let p = NSMutableParagraphStyle()
+    p.alignment = .center
+    p.lineBreakMode = .byCharWrapping
+    return p
+}
+
+func measureWrapped(_ text: String, font: NSFont, maxWidth: CGFloat) -> CGSize {
+    let s = NSAttributedString(string: text, attributes: [
+        .font: font,
+        .paragraphStyle: paragraphStyle(),
+    ])
+    let rect = s.boundingRect(with: NSSize(width: maxWidth,
+                                           height: .greatestFiniteMagnitude),
+                              options: [.usesLineFragmentOrigin, .usesFontLeading])
+    return NSSize(width: ceil(rect.width), height: ceil(rect.height))
+}
+
+func effectiveMargin(_ requested: CGFloat, within length: CGFloat) -> CGFloat {
+    min(requested, max(0, (length - 1) / 2))
+}
+
+struct LayoutResult {
+    let font: NSFont
+    let contentSize: CGSize
+}
+
+func fitLayout(texts: [String], baseFontSize: CGFloat,
+               maxContentWidth: CGFloat, maxContentHeight: CGFloat) -> LayoutResult {
+    let minFontSize = min(baseFontSize, minAffirmFontSize)
+    var candidateSize = baseFontSize
+    var lastResult: LayoutResult?
+
+    while candidateSize >= minFontSize {
+        let font = NSFont.systemFont(ofSize: candidateSize, weight: affirmFontWeight)
+        let sizes = texts.map { measureWrapped($0, font: font, maxWidth: maxContentWidth) }
+        let contentSize = CGSize(width: sizes.map(\.width).max() ?? 0,
+                                 height: sizes.map(\.height).max() ?? 0)
+        let result = LayoutResult(font: font, contentSize: contentSize)
+        lastResult = result
+        if contentSize.height <= maxContentHeight {
+            return result
+        }
+        candidateSize -= 1
+    }
+
+    return lastResult ?? LayoutResult(
+        font: NSFont.systemFont(ofSize: minFontSize, weight: affirmFontWeight),
+        contentSize: .zero
+    )
 }
 
 // MARK: - Gate checks
@@ -155,19 +208,26 @@ let safeIdx = ((idx % affirmations.count) + affirmations.count) % affirmations.c
 let affirmation = affirmations[safeIdx]
 let mask = maskFor(affirmation)
 
-let font = NSFont.systemFont(ofSize: affirmFontSize, weight: affirmFontWeight)
-let textSize = measure(affirmation, font: font)
-let maskSize = measure(mask, font: font)
-// Window must fit the larger of the two so the swap doesn't reflow.
-let winW = ceil(max(textSize.width, maskSize.width)) + 8
-let winH = ceil(max(textSize.height, maskSize.height)) + 4
-
 let screen = screenForCursor()
-let sf = screen.frame
-let availW = max(0, sf.width  - winW - edgeMargin * 2)
-let availH = max(0, sf.height - winH - edgeMargin * 2)
-let originX = sf.minX + edgeMargin + CGFloat.random(in: 0...availW)
-let originY = sf.minY + edgeMargin + CGFloat.random(in: 0...availH)
+let visibleFrame = screen.visibleFrame
+let marginX = effectiveMargin(edgeMargin, within: visibleFrame.width)
+let marginY = effectiveMargin(edgeMargin, within: visibleFrame.height)
+let usableFrame = visibleFrame.insetBy(dx: marginX, dy: marginY)
+let maxContentWidth = max(1, usableFrame.width - windowHPadding * 2)
+let maxContentHeight = max(1, usableFrame.height - windowVPadding * 2)
+let layout = fitLayout(texts: [affirmation, mask],
+                       baseFontSize: affirmFontSize,
+                       maxContentWidth: maxContentWidth,
+                       maxContentHeight: maxContentHeight)
+let font = layout.font
+let winW = min(usableFrame.width,
+               ceil(layout.contentSize.width) + windowHPadding * 2)
+let winH = min(usableFrame.height,
+               ceil(layout.contentSize.height) + windowVPadding * 2)
+let availW = max(0, usableFrame.width - winW)
+let availH = max(0, usableFrame.height - winH)
+let originX = usableFrame.minX + CGFloat.random(in: 0...availW)
+let originY = usableFrame.minY + CGFloat.random(in: 0...availH)
 let winRect = NSRect(x: originX, y: originY, width: winW, height: winH)
 
 // Advance index + schedule next gap *before* we display, so even if something
@@ -195,17 +255,11 @@ window.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary,
                              .stationary, .ignoresCycle]
 window.isReleasedWhenClosed = false
 
-// Build an attributed-string factory that gives the text a plain white fill.
-let centered: NSMutableParagraphStyle = {
-    let p = NSMutableParagraphStyle()
-    p.alignment = .center
-    return p
-}()
 func styled(_ s: String) -> NSAttributedString {
     NSAttributedString(string: s, attributes: [
         .font: font,
         .foregroundColor: NSColor.white.withAlphaComponent(affirmTextAlpha),
-        .paragraphStyle: centered,
+        .paragraphStyle: paragraphStyle(),
     ])
 }
 
@@ -215,8 +269,16 @@ label.isEditable = false
 label.drawsBackground = false
 label.backgroundColor = .clear
 label.alignment = .center
+label.lineBreakMode = .byCharWrapping
+label.usesSingleLineMode = false
+label.maximumNumberOfLines = 0
+label.cell?.wraps = true
+label.cell?.isScrollable = false
 label.attributedStringValue = styled(affirmation)
-label.frame = NSRect(origin: .zero, size: winRect.size)
+label.frame = NSRect(x: windowHPadding,
+                     y: windowVPadding,
+                     width: winRect.width - windowHPadding * 2,
+                     height: winRect.height - windowVPadding * 2)
 label.autoresizingMask = [.width, .height]
 
 let container = NSView(frame: NSRect(origin: .zero, size: winRect.size))

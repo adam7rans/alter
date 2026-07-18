@@ -8,6 +8,7 @@ com.*.local.plist
 # Compiled binaries — users build from source via install.sh.
 /breathe
 /affirm
+/lookaway
 /alterprefs
 
 # macOS junk

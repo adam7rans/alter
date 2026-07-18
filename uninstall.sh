@@ -6,7 +6,7 @@ set -euo pipefail
 
 AGENTS="$HOME/Library/LaunchAgents"
 
-for label in local.alter.breathe local.alter.affirm local.alter.prefs; do
+for label in local.alter.breathe local.alter.affirm local.alter.lookaway local.alter.prefs; do
     plist="$AGENTS/$label.plist"
     if [ -f "$plist" ]; then
         launchctl unload "$plist" 2>/dev/null || true

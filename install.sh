@@ -7,13 +7,24 @@ set -euo pipefail
 
 DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 AGENTS="$HOME/Library/LaunchAgents"
+BUILDDIR="$(mktemp -d "${TMPDIR:-/tmp}/alter-build.XXXXXX")"
 mkdir -p "$AGENTS"
 
 # --- 1. Build ----------------------------------------------------------------
-echo "▸ building breathe + affirm + alterprefs..."
-swiftc -O "$DIR/breathe.swift"    -o "$DIR/breathe"
+echo "▸ building breathe + affirm + lookaway + alterprefs..."
+swiftc -O -parse-as-library -emit-module -emit-object \
+    -module-name AlterRuntimeSupport \
+    "$DIR/runtime_support.swift" \
+    -emit-module-path "$BUILDDIR/AlterRuntimeSupport.swiftmodule" \
+    -o "$BUILDDIR/runtime_support.o"
+swiftc -O -I "$BUILDDIR" "$DIR/breathe.swift" "$BUILDDIR/runtime_support.o" -o "$DIR/breathe"
 swiftc -O "$DIR/affirm.swift"     -o "$DIR/affirm"
-swiftc -O -parse-as-library "$DIR/alterprefs.swift" -o "$DIR/alterprefs"
+swiftc -O -I "$BUILDDIR" "$DIR/lookaway.swift" "$BUILDDIR/runtime_support.o" -o "$DIR/lookaway"
+swiftc -O -parse-as-library \
+    "$DIR/alterprefs.swift" \
+    "$DIR/alterprefs_views.swift" \
+    "$DIR/alterprefs_components.swift" \
+    -o "$DIR/alterprefs"
 
 # --- 2. Seed affirmations.txt if missing -------------------------------------
 if [ ! -f "$DIR/affirmations.txt" ]; then
@@ -28,12 +39,14 @@ sed "s/__INSTALL_DIR__/$ESC/g" "$DIR/breathe.plist.template"    \
     > "$AGENTS/local.alter.breathe.plist"
 sed "s/__INSTALL_DIR__/$ESC/g" "$DIR/affirm.plist.template"     \
     > "$AGENTS/local.alter.affirm.plist"
+sed "s/__INSTALL_DIR__/$ESC/g" "$DIR/lookaway.plist.template"   \
+    > "$AGENTS/local.alter.lookaway.plist"
 sed "s/__INSTALL_DIR__/$ESC/g" "$DIR/alterprefs.plist.template" \
     > "$AGENTS/local.alter.prefs.plist"
 
 # --- 4. (Re)load agents -------------------------------------------------------
 echo "▸ loading agents into launchd"
-for label in local.alter.breathe local.alter.affirm local.alter.prefs; do
+for label in local.alter.breathe local.alter.affirm local.alter.lookaway local.alter.prefs; do
     launchctl unload "$AGENTS/$label.plist" 2>/dev/null || true
     launchctl load   "$AGENTS/$label.plist"
 done
@@ -43,6 +56,7 @@ echo "✓ installed."
 echo
 echo "  breathe — visible word every ~3-10 min (while active)."
 echo "  affirm  — subliminal affirmation flash every 15-60 s (while active)."
+echo "  lookaway — full-screen eye-rest break every ~10 min (while active)."
 echo "  alter   — menu-bar app for tweaking everything live (waveform icon, top right)."
 echo
 echo "Edit your affirmations:   $DIR/affirmations.txt"

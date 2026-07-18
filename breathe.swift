@@ -3,6 +3,7 @@ import IOKit
 import CoreImage
 import Metal
 import MetalKit
+import AlterRuntimeSupport
 
 // MARK: - Config (read from ~/Library/Application Support/breathe/config.json)
 //
@@ -10,7 +11,6 @@ import MetalKit
 // missing, unparseable, or only partially specified, the unspecified fields
 // fall back to these defaults. Edit via the `alterprefs` menu-bar app, or by
 // hand in the JSON file directly.
-
 struct BreatheConfig: Codable {
     var enabled: Bool = true
     var displaySeconds: Double = 6.0
@@ -63,62 +63,28 @@ let overlayColor = NSColor(red: CGFloat(_cfg.overlayRed),
 
 // Master kill switch — exit immediately if the UI has disabled this tool.
 if !_cfg.enabled { exit(0) }
+if alterIsOBSRunning() { exit(0) }
 
 // File used to remember when the next breathe is allowed to fire.
-let stateURL: URL = {
-    let base = FileManager.default.urls(for: .applicationSupportDirectory,
-                                        in: .userDomainMask).first!
-        .appendingPathComponent("breathe", isDirectory: true)
-    try? FileManager.default.createDirectory(at: base,
-                                             withIntermediateDirectories: true)
-    return base.appendingPathComponent("breathe_next_at")
-}()
+let stateURL = alterStateURL("breathe_next_at")
 
 func nextAllowedAt() -> Date? {
-    guard let s = try? String(contentsOf: stateURL, encoding: .utf8),
-          let t = TimeInterval(s.trimmingCharacters(in: .whitespacesAndNewlines))
-    else { return nil }
+    guard let t = alterReadDouble(stateURL) else { return nil }
     return Date(timeIntervalSince1970: t)
 }
 
-/// Roll a fresh random interval and persist the next allowed timestamp.
 func scheduleNextAppearance() {
     let gap = Double.random(in: minIntervalSec...maxIntervalSec)
     let next = Date().timeIntervalSince1970 + gap
-    try? String(next).write(to: stateURL, atomically: true, encoding: .utf8)
-}
-
-/// Returns seconds since the last HID (keyboard/mouse) event, or nil on error.
-func systemIdleSeconds() -> Double? {
-    var iterator: io_iterator_t = 0
-    let result = IOServiceGetMatchingServices(
-        kIOMainPortDefault,
-        IOServiceMatching("IOHIDSystem"),
-        &iterator
-    )
-    guard result == KERN_SUCCESS else { return nil }
-    defer { IOObjectRelease(iterator) }
-
-    let entry: io_registry_entry_t = IOIteratorNext(iterator)
-    guard entry != 0 else { return nil }
-    defer { IOObjectRelease(entry) }
-
-    var props: Unmanaged<CFMutableDictionary>?
-    guard IORegistryEntryCreateCFProperties(entry, &props, kCFAllocatorDefault, 0) == KERN_SUCCESS,
-          let dict = props?.takeRetainedValue() as? [String: Any],
-          let idleNs = dict["HIDIdleTime"] as? UInt64
-    else { return nil }
-
-    return Double(idleNs) / 1_000_000_000.0
+    alterWriteDouble(stateURL, next)
 }
 
 // Bail out early if the user is idle. No window, no power assertion — just exit.
-if let idle = systemIdleSeconds(), idle >= idleSkipSeconds {
+if let idle = alterSystemIdleSeconds(), idle >= idleSkipSeconds {
     exit(0)
 }
 
-// Throttle: don't show until we've passed the randomly-scheduled
-// "next allowed" timestamp. (launchd fires us every 60s.)
+// Throttle until the next scheduled timestamp. (launchd fires us every 60s.)
 if let next = nextAllowedAt(), Date() < next {
     exit(0)
 }

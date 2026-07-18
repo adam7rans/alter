@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN"
+  "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>Label</key>
+    <string>local.alter.lookaway</string>
+
+    <key>ProgramArguments</key>
+    <array>
+        <string>__INSTALL_DIR__/lookaway</string>
+    </array>
+
+    <!-- launchd ticks every 60 s. The binary itself enforces the configured
+         fixed interval (default 10 min), so returning to the Mac can still
+         trigger a timely eye-rest reminder. -->
+    <key>StartInterval</key>
+    <integer>60</integer>
+
+    <key>LimitLoadToSessionType</key>
+    <string>Aqua</string>
+
+    <key>RunAtLoad</key>
+    <false/>
+
+    <key>StandardOutPath</key>
+    <string>/tmp/alter-lookaway.out.log</string>
+    <key>StandardErrorPath</key>
+    <string>/tmp/alter-lookaway.err.log</string>
+</dict>
+</plist>

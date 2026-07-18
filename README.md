@@ -1,20 +1,23 @@
 # alter
 
-> Two tiny macOS background tools for nudging your mind toward where you want it to go.
+> Three tiny macOS background tools for nudging your mind toward where you want it to go.
 
-`alter` is three native Swift programs that run quietly in the background while you work:
+`alter` is four native Swift programs that run quietly in the background while you work:
 
 - **`breathe`** — every ~3–10 minutes (random), the word *breathe* fades in across your screen with a gentle sine-wave distortion, holds for a few seconds, then fades away. Conscious, intentional, a moment to inhale.
 - **`affirm`** — every 15–60 seconds (random), one affirmation from your personal list flashes for 33 ms at a random spot on screen, immediately scrubbed by a 120 ms random-character mask. **Subliminal:** you won't consciously read it, but your visual cortex still processes it.
-- **`alterprefs`** — a tiny SwiftUI menu-bar app (waveform icon in your status bar) for tweaking every parameter of both tools live — intervals, durations, opacity, wave shape, font size — with sliders. Includes "Fire now" buttons to test changes immediately. Changes save instantly and the next firing picks them up; no rebuild.
+- **`lookaway`** — every 10 minutes by default, a full-screen near-black eye-rest overlay takes over for one minute and asks you to focus on something far away, then plays a return sound when the break ends.
+- **`alterprefs`** — a tiny SwiftUI menu-bar app (waveform icon in your status bar) for tweaking every parameter of all three tools live — intervals, durations, opacity, wave shape, font size, and sounds — with sliders. Includes "Fire now" buttons to test changes immediately. Changes save instantly and the next firing picks them up; no rebuild.
 
-The overlays are **click-through** (won't steal focus or block typing), **idle-aware** (do nothing if you've walked away), and hold **no power assertions** (won't keep your Mac awake).
+`breathe` and `affirm` are **click-through** (won't steal focus or block typing). `lookaway` is the opposite on purpose: it covers the screen, grabs focus, and forces a short visual break. All three overlays are **idle-aware** (do nothing if you've walked away) and hold **no power assertions** (won't keep your Mac awake). If OBS is open, `breathe` and `lookaway` stay suppressed so they don't interrupt recording; `affirm` still runs.
 
 ## Why
 
 The `breathe` overlay is a low-friction mindfulness nudge — most reminder apps are either dismissible notifications you ignore, or modal interruptions you resent. A 6-second translucent fade above all your windows is hard to ignore and impossible to dismiss.
 
 The `affirm` overlay is built on the subliminal-priming literature (Bargh, Custers, Aarts et al.) — brief masked presentation of goal-related words has measurable effects on subsequent behavior and decision-making. By cycling through *your* affirmations at random intervals and positions, you reprogram the substrate without ever consciously rehearsing the words.
+
+The `lookaway` overlay is for eye health and visual fatigue. It uses the same lightweight launchd-driven background pattern as the other tools, but switches from subtle nudging to a short forced interruption so you actually refocus at distance instead of just promising yourself you'll do it later.
 
 ```diagram
 launchd tick (every 60s)
@@ -42,9 +45,9 @@ cd alter
 ```
 
 The installer:
-1. Compiles `breathe.swift` and `affirm.swift` with `swiftc -O`.
+1. Compiles `breathe.swift`, `affirm.swift`, `lookaway.swift`, and the menu-bar app with `swiftc -O`.
 2. Copies `affirmations.example.txt` → `affirmations.txt` (if you don't have one yet).
-3. Generates two launchd plists pointed at your install path.
+3. Generates the launchd plists pointed at your install path.
 4. Copies them to `~/Library/LaunchAgents/` and loads them.
 
 You'll also get a one-time macOS prompt to allow file access to the install directory. Click **Allow**.
@@ -74,6 +77,13 @@ Defaults / hard caps: each source file has its `Config` struct at the top with d
 
 The `breathe` overlay is, well, visible.
 
+For `lookaway`, set a short `Length` in `alterprefs` like `10 s`, click `Fire now`, and confirm that:
+
+- every screen gets a near-black full-screen overlay
+- the message stays centered and readable
+- the overlay disappears after the configured duration
+- the configured return sound plays when the break ends
+
 For `affirm`, since each flash is briefer than conscious recognition, you have two easy ways to test it:
 
 - Click `Preview` in the `alterprefs` menu-bar app. That runs the next affirmation with a longer visible dwell and no mask so you can inspect wrapping and placement.
@@ -101,10 +111,11 @@ This unloads the agents and removes the plists from `~/Library/LaunchAgents/`. S
 
 ## How it's built
 
-Both binaries are single-file Swift programs:
+The overlays are native Swift programs:
 
 - `breathe.swift` uses `Cocoa` + `IOKit` + `Metal` + `CoreImage`. The wave distortion is a `CIWarpKernel` (Core Image Kernel Language) rendered via `MTKView` — a direct port of the WebGL fragment shader used in [CAST](https://github.com/) for caption animation.
 - `affirm.swift` uses `Cocoa` + `IOKit`. Idle detection is via `IOHIDSystem`'s `HIDIdleTime`. State (cycle index + next-allowed timestamp) lives in `~/Library/Application Support/breathe/`.
+- `lookaway.swift` uses `Cocoa` + `IOKit`. It schedules a fixed cadence, creates one blocking window per screen, and optionally plays a built-in macOS sound when the break ends.
 
 Scheduling is via per-user `launchd` agents in `~/Library/LaunchAgents/`. launchd ticks each binary every 60 seconds; the binary itself decides whether to actually show something or exit silently.
 

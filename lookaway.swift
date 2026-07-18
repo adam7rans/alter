@@ -27,7 +27,7 @@ let config: LookAwayConfig = {
 }()
 
 if !config.enabled { exit(0) }
-if alterIsOBSRunning() { exit(0) }
+if alterShouldSuppressOverlays() { exit(0) }
 
 let nextAllowedURL = alterStateURL("lookaway_next_at")
 

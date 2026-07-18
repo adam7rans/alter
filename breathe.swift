@@ -63,7 +63,7 @@ let overlayColor = NSColor(red: CGFloat(_cfg.overlayRed),
 
 // Master kill switch — exit immediately if the UI has disabled this tool.
 if !_cfg.enabled { exit(0) }
-if alterIsOBSRunning() { exit(0) }
+if alterShouldSuppressOverlays() { exit(0) }
 
 // File used to remember when the next breathe is allowed to fire.
 let stateURL = alterStateURL("breathe_next_at")

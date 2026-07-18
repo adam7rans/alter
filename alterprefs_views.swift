@@ -19,7 +19,7 @@ struct PrefsView: View {
 struct BreatheSection: View {
     @EnvironmentObject private var store: Store
     @State private var showColorPicker = false
-    private let obsSuppressed = obsSuppressionActive()
+    private let mediaSuppressed = mediaSuppressionActive()
 
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
@@ -30,7 +30,7 @@ struct BreatheSection: View {
                 Spacer()
                 Button("Fire now") { store.fireBreathe() }
                     .controlSize(.small)
-                    .disabled(obsSuppressed)
+                    .disabled(mediaSuppressed)
             }
             Group {
                 ParamSlider("Interval min", $store.breathe.minIntervalSec, 30...600, fmt: "%.0f s")
@@ -64,8 +64,8 @@ struct BreatheSection: View {
             }
             .disabled(!store.breathe.enabled)
             .opacity(store.breathe.enabled ? 1.0 : 0.4)
-            if obsSuppressed {
-                Text("Paused while OBS Studio is open.")
+            if mediaSuppressed {
+                Text("Paused while OBS Studio or VLC is open.")
                     .font(.caption)
                     .foregroundColor(.secondary)
             }
@@ -168,7 +168,7 @@ struct AffirmSection: View {
 struct LookAwaySection: View {
     @EnvironmentObject private var store: Store
     @State private var showColorPicker = false
-    private let obsSuppressed = obsSuppressionActive()
+    private let mediaSuppressed = mediaSuppressionActive()
 
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
@@ -179,7 +179,7 @@ struct LookAwaySection: View {
                 Spacer()
                 Button("Fire now") { store.fireLookAway() }
                     .controlSize(.small)
-                    .disabled(obsSuppressed)
+                    .disabled(mediaSuppressed)
             }
             Group {
                 ParamSlider("Every", $store.lookAway.intervalSec, 300...3600, fmt: "%.0f min", mult: 1.0 / 60.0)
@@ -218,8 +218,8 @@ struct LookAwaySection: View {
             }
             .disabled(!store.lookAway.enabled)
             .opacity(store.lookAway.enabled ? 1.0 : 0.4)
-            if obsSuppressed {
-                Text("Paused while OBS Studio is open.")
+            if mediaSuppressed {
+                Text("Paused while OBS Studio or VLC is open.")
                     .font(.caption)
                     .foregroundColor(.secondary)
             }
@@ -273,10 +273,13 @@ struct LookAwayTextColorPopover: View {
     }
 }
 
-private func obsSuppressionActive() -> Bool {
+private func mediaSuppressionActive() -> Bool {
     NSWorkspace.shared.runningApplications.contains { app in
         app.bundleIdentifier == "com.obsproject.obs-studio"
             || app.localizedName == "OBS"
             || app.localizedName == "OBS Studio"
+            || app.bundleIdentifier == "org.videolan.vlc"
+            || app.localizedName == "VLC"
+            || app.localizedName == "VLC media player"
     }
 }

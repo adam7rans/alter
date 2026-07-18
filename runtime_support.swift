@@ -46,10 +46,13 @@ public func alterSystemIdleSeconds() -> Double? {
     return Double(idleNs) / 1_000_000_000.0
 }
 
-public func alterIsOBSRunning() -> Bool {
+public func alterShouldSuppressOverlays() -> Bool {
     NSWorkspace.shared.runningApplications.contains { app in
         app.bundleIdentifier == "com.obsproject.obs-studio"
             || app.localizedName == "OBS"
             || app.localizedName == "OBS Studio"
+            || app.bundleIdentifier == "org.videolan.vlc"
+            || app.localizedName == "VLC"
+            || app.localizedName == "VLC media player"
     }
 }

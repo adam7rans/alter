@@ -184,6 +184,7 @@ struct LookAwaySection: View {
             Group {
                 ParamSlider("Every", $store.lookAway.intervalSec, 300...3600, fmt: "%.0f min", mult: 1.0 / 60.0)
                 ParamSlider("Length", $store.lookAway.durationSec, 10...300, fmt: "%.0f s")
+                ParamSliderInt("Countdown", $store.lookAway.countdownSec, 0...30, suffix: " s")
                 ParamSlider("Bg opacity", $store.lookAway.backgroundOpacity, 0.6...1.0, fmt: "%.0f%%", mult: 100)
                 HStack(spacing: 8) {
                     Text("Text color")

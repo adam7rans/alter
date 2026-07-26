@@ -37,6 +37,7 @@ struct AffirmConfig: Codable, Equatable {
 struct LookAwayConfig: Codable, Equatable {
     var enabled: Bool = true
     var durationSec: Double = 60.0
+    var countdownSec: Int = 5
     var intervalSec: Double = 600.0
     var idleSkipSec: Double = 120.0
     var backgroundOpacity: Double = 1.0
@@ -44,6 +45,28 @@ struct LookAwayConfig: Codable, Equatable {
     var textGreen: Double = 0.16
     var textBlue: Double = 0.16
     var soundName: String = "Glass"
+
+    enum CodingKeys: String, CodingKey {
+        case enabled, durationSec, countdownSec, intervalSec, idleSkipSec
+        case backgroundOpacity, textRed, textGreen, textBlue, soundName
+    }
+
+    init() {}
+
+    init(from decoder: Decoder) throws {
+        self.init()
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        enabled = try container.decodeIfPresent(Bool.self, forKey: .enabled) ?? enabled
+        durationSec = try container.decodeIfPresent(Double.self, forKey: .durationSec) ?? durationSec
+        countdownSec = try container.decodeIfPresent(Int.self, forKey: .countdownSec) ?? countdownSec
+        intervalSec = try container.decodeIfPresent(Double.self, forKey: .intervalSec) ?? intervalSec
+        idleSkipSec = try container.decodeIfPresent(Double.self, forKey: .idleSkipSec) ?? idleSkipSec
+        backgroundOpacity = try container.decodeIfPresent(Double.self, forKey: .backgroundOpacity) ?? backgroundOpacity
+        textRed = try container.decodeIfPresent(Double.self, forKey: .textRed) ?? textRed
+        textGreen = try container.decodeIfPresent(Double.self, forKey: .textGreen) ?? textGreen
+        textBlue = try container.decodeIfPresent(Double.self, forKey: .textBlue) ?? textBlue
+        soundName = try container.decodeIfPresent(String.self, forKey: .soundName) ?? soundName
+    }
 }
 
 struct RootConfig: Codable {

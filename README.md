@@ -6,7 +6,7 @@
 
 - **`breathe`** — every ~3–10 minutes (random), the word *breathe* fades in across your screen with a gentle sine-wave distortion, holds for a few seconds, then fades away. Conscious, intentional, a moment to inhale.
 - **`affirm`** — every 15–60 seconds (random), one affirmation from your personal list flashes for 33 ms at a random spot on screen, immediately scrubbed by a 120 ms random-character mask. **Subliminal:** you won't consciously read it, but your visual cortex still processes it.
-- **`lookaway`** — every 10 minutes by default, a full-screen near-black eye-rest overlay takes over for one minute and asks you to focus on something far away, then plays a return sound when the break ends.
+- **`lookaway`** — every 10 minutes by default, a 5-second on-screen countdown warns you before a full-screen near-black eye-rest overlay takes over for one minute and asks you to focus on something far away, then plays a return sound when the break ends.
 - **`alterprefs`** — a tiny SwiftUI menu-bar app (waveform icon in your status bar) for tweaking every parameter of all three tools live — intervals, durations, opacity, wave shape, font size, and sounds — with sliders. Includes "Fire now" buttons to test changes immediately. Changes save instantly and the next firing picks them up; no rebuild.
 
 `breathe` and `affirm` are **click-through** (won't steal focus or block typing). `lookaway` is the opposite on purpose: it covers the screen, grabs focus, and forces a short visual break. All three overlays are **idle-aware** (do nothing if you've walked away) and hold **no power assertions** (won't keep your Mac awake). If OBS Studio or VLC is open, `breathe` and `lookaway` stay suppressed so they don't interrupt recording or playback; `affirm` still runs.
@@ -77,7 +77,7 @@ Defaults / hard caps: each source file has its `Config` struct at the top with d
 
 The `breathe` overlay is, well, visible.
 
-For `lookaway`, set a short `Length` in `alterprefs` like `10 s`, click `Fire now`, and confirm that:
+For `lookaway`, set a short `Length` in `alterprefs` like `10 s`, click `Fire now`, and confirm that the configured countdown appears before the blocking cover:
 
 - every screen gets a near-black full-screen overlay
 - the message stays centered and readable

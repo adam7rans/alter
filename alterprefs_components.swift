@@ -79,11 +79,14 @@ struct ParamSliderInt: View {
     let label: String
     @Binding var value: Int
     let range: ClosedRange<Int>
+    let suffix: String
 
-    init(_ label: String, _ value: Binding<Int>, _ range: ClosedRange<Int>) {
+    init(_ label: String, _ value: Binding<Int>, _ range: ClosedRange<Int>,
+         suffix: String = "") {
         self.label = label
         _value = value
         self.range = range
+        self.suffix = suffix
     }
 
     var body: some View {
@@ -95,7 +98,7 @@ struct ParamSliderInt: View {
                 get: { Double(value) },
                 set: { value = Int($0.rounded()) }
             ), in: Double(range.lowerBound)...Double(range.upperBound))
-            Text("\(value)")
+            Text("\(value)\(suffix)")
                 .frame(width: 56, alignment: .trailing)
                 .font(.callout.monospacedDigit())
                 .foregroundColor(.secondary)
